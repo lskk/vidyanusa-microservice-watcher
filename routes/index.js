@@ -3,39 +3,33 @@ var router = express.Router();
 var app = express();
 var bodyParser = require('body-parser');
 
-//Deklarasi library untuk listen Mongo DB
-var mongoOplog = require('mongo-oplog');
-//import MongoOplog from 'mongo-oplog'
-const oplog = mongoOplog('mongodb://127.0.0.1:27017/vidyanusa', { ns: 'vidyanusa.schools' })
+var mubsub = require('mubsub');
 
-oplog.tail();
+var client = mubsub('mongodb://127.0.0.1:27017/vidyanusa');
+var channel = client.channel('vidyanusa');
 
-oplog.on('op', data => {
-  console.log(data);
+client.on('error', console.error);
+channel.on('error', console.error);
+
+channel.subscribe('bar', function (message) {
+    console.log(message.foo); // => 'bar'
 });
 
-oplog.on('insert', doc => {
-  console.log(doc);
+channel.subscribe('baz', function (message) {
+    console.log(message); // => 'baz'
 });
+// The given event was published
+channel.on('myevent', console.log);
 
-oplog.on('update', doc => {
-  console.log(doc);
-});
+// Any event was published
+channel.on('message', console.log);
 
-oplog.on('delete', doc => {
-  console.log(doc.o._id);
-});
+// Document was inserted
+channel.on('document', console.log);
 
-oplog.on('error', error => {
-  console.log(error);
-});
+channel.on('ready', console.log);
 
-oplog.on('end', () => {
-  console.log('Stream ended');
-});
-
-oplog.stop(() => {
-  console.log('server stopped');
-});
+channel.publish('bar', { foo: 'bar' });
+channel.publish('baz', 'baz');
 
 module.exports = router;
